@@ -22,8 +22,8 @@ config = {
     'raise_on_warnings': True,
 }
 
-ROWS_PER_THREAD = 100000
-THREAD_COUNT = 10  # will insert 1_000_000 rows
+ROWS_PER_THREAD = 4000000
+THREAD_COUNT = 10  # will insert 40_000_000 rows
 
 
 def insert_rows(start_id, count):
@@ -41,9 +41,19 @@ def insert_rows(start_id, count):
              string_val1, string_val2, string_val3, num_val4) \
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
+        
+        batch_size = 10000
         data = []
         base_time = datetime.datetime.now()
+        
         for i in range(count):
+            if i > 0 and i % batch_size == 0:
+                cursor.executemany(sql, data)
+                cnx.commit()
+                data = []
+                if i % 100000 == 0:
+                    print(f"Thread starting {start_id}: inserted {i}/{count} rows")
+
             offset_hours = (start_id + i) % 24
             tcol = base_time + datetime.timedelta(hours=offset_hours)
             num = 1000 + (start_id + i)  # arbitrary
@@ -57,8 +67,11 @@ def insert_rows(start_id, count):
             n4 = float(((start_id + i) % 100) * 0.1)
             data.append((tcol, num, s_col, n1, n2, n3, sv1, sv2, sv3, n4))
 
-        cursor.executemany(sql, data)
-        cnx.commit()
+        if data:
+            cursor.executemany(sql, data)
+            cnx.commit()
+            print(f"Thread starting {start_id}: finished {count} rows")
+
     except mysql.connector.Error as err:
         print(f"Error: {err}")
     finally:
@@ -69,6 +82,19 @@ def insert_rows(start_id, count):
 
 
 def main():
+    # Truncate table first
+    print("Truncating table...")
+    try:
+        cnx = mysql.connector.connect(**config)
+        cursor = cnx.cursor()
+        cursor.execute("TRUNCATE TABLE composite_key_table")
+        cnx.commit()
+        cursor.close()
+        cnx.close()
+        print("Table truncated.")
+    except mysql.connector.Error as err:
+        print(f"Error truncating table: {err}")
+
     threads = []
     for t in range(THREAD_COUNT):
         start = t * ROWS_PER_THREAD
