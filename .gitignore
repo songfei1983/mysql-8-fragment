@@ -1,0 +1,19 @@
+# Python files
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+
+# MySQL data volume
+mysql_data/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code settings
+.vscode/
+
+# Logs and temporary
+*.log
+*.tmp

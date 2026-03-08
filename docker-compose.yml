@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql-8
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: test_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      TZ: 'Asia/Shanghai'
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init:/docker-entrypoint-initdb.d
+    networks:
+      - mysql_network
+    command: 
+      - '--character-set-server=utf8mb4'
+      - '--collation-server=utf8mb4_unicode_ci'
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:
+
+networks:
+  mysql_network:
+    driver: bridge
